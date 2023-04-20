@@ -23,8 +23,6 @@ ext["kotlinPoetVersion"] = "1.12.0"
 
 repositories {
     mavenCentral()
-    maven(uri("artifactregistry://asia-northeast3-maven.pkg.dev/mp-artifact-registry-aa49/qanda-packages"))
-    mavenLocal()
 }
 
 allprojects {
