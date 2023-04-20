@@ -1,9 +1,13 @@
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.util.Properties
+
 plugins {
     kotlin("jvm") version "1.7.20" apply false
     id("com.google.protobuf") version "0.9.2" apply false
     `maven-publish`
     id("org.jlleitschuh.gradle.ktlint") version "11.3.1"
-    signing
+    id("com.google.cloud.artifactregistry.gradle-plugin") version "2.2.0"
 }
 
 group = "io.github.mscheong01"
@@ -19,6 +23,12 @@ ext["kotlinPoetVersion"] = "1.12.0"
 
 repositories {
     mavenCentral()
+    maven(uri("artifactregistry://asia-northeast3-maven.pkg.dev/mp-artifact-registry-aa49/qanda-packages"))
+    mavenLocal()
+}
+
+allprojects {
+    apply(plugin = "com.google.cloud.artifactregistry.gradle-plugin")
 }
 
 subprojects {
@@ -28,7 +38,6 @@ subprojects {
         plugin("com.google.protobuf")
         plugin("maven-publish")
         plugin("org.jlleitschuh.gradle.ktlint")
-        plugin("signing")
     }
 
     group = rootProject.group
@@ -79,18 +88,12 @@ subprojects {
                 }
             }
         }
+
         repositories {
             maven {
-                name = "OSSRH"
-                url = if ((version as String).endsWith("-SNAPSHOT")) {
-                    uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-                } else {
-                    uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-                }
-                credentials {
-                    username = System.getenv("MAVEN_USERNAME")
-                    password = System.getenv("MAVEN_PASSWORD")
-                }
+                version = version
+                name = "qanda-packages"
+                url = uri("artifactregistry://asia-northeast3-maven.pkg.dev/mp-artifact-registry-aa49/qanda-packages")
             }
         }
     }
@@ -104,29 +107,19 @@ subprojects {
             }
         }
     }
-
-    signing {
-        val signingKey: String? by project
-        val signingPassword: String? by project
-        useInMemoryPgpKeys(signingKey, signingPassword)
-        sign(publishing.publications["maven"])
-    }
-
-    tasks.withType<Sign>().configureEach {
-        onlyIf {
-            project.hasProperty("releaseVersion")
-        }
-    }
 }
 
-tasks.create("updateVersion") {
-    if (rootProject.hasProperty("next")) {
-        val file = File(rootProject.rootDir, "gradle.properties")
-        val prop = java.util.Properties().apply { load(java.io.FileInputStream(file)) }
-        val ver = rootProject.property("next") as String
-        if (ver != prop.getProperty("version")) {
-            prop.setProperty("version", ver)
-            prop.store(java.io.FileOutputStream(file), null)
+task("updateVersion") {
+    properties["releaseVersion"]?.let { releaseVersion ->
+        val newSnapshotVersion = (releaseVersion as String).split(".").let {
+            "${it[0]}.${it[1].toInt() + 1}.0-SNAPSHOT"
+        }
+
+        val file = File(rootDir, "gradle.properties")
+        val prop = Properties().apply { load(FileInputStream(file)) }
+        if (prop.getProperty("version") != newSnapshotVersion) {
+            prop.setProperty("version", newSnapshotVersion)
+            prop.store(FileOutputStream(file), null)
         }
     }
 }
