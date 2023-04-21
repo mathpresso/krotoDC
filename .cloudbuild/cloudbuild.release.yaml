@@ -19,7 +19,7 @@ steps:
     args:
       - -c
       - |
-        git remote set-url origin git@github.com:mathpresso/backend-common.git
+        git remote set-url origin git@github.com:mathpresso/krotoDC.git
         git fetch
         git checkout main
     volumes:
