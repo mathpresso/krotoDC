@@ -10,7 +10,7 @@ plugins {
     id("com.google.cloud.artifactregistry.gradle-plugin") version "2.2.0"
 }
 
-group = "io.github.mscheong01"
+group = "ai.qanda"
 if (project.hasProperty("releaseVersion")) {
     version = project.property("releaseVersion") as String
 }
