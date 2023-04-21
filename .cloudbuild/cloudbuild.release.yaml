@@ -1,0 +1,63 @@
+steps:
+  # Set SSH key to volume space
+  - name: 'gcr.io/cloud-builders/git'
+    secretEnv: ['SSH_KEY']
+    entrypoint: 'bash'
+    args:
+      - -c
+      - |
+        echo "$$SSH_KEY" >> /root/.ssh/id_rsa
+        chmod 400 /root/.ssh/id_rsa
+        ssh-keyscan -H github.com >> /root/.ssh/known_hosts
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  # set up git
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+      - -c
+      - |
+        git remote set-url origin git@github.com:mathpresso/backend-common.git
+        git fetch
+        git checkout main
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+  # Publish & Update minor version
+  - name: "gradle:7.5.1"
+    entrypoint: 'bash'
+    args:
+      - -c
+      - |
+        ./gradlew -Pversion=${TAG_NAME} clean publish
+        ./gradlew -PreleaseVersion=${TAG_NAME} updateVersion --rerun-tasks
+
+  # Push version update to GitHub
+  - name: 'gcr.io/cloud-builders/git'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        git config --global user.email "mp-deployer@mathpresso.com"
+        git config --global user.name "mp-deployer"
+        git config --list
+        git fetch
+        git pull
+        git add ./gradle.properties
+        git commit -m "update project version"
+        git push
+    volumes:
+      - name: 'ssh'
+        path: /root/.ssh
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/qanda-backend-modules-9dc3/secrets/deploy-key/versions/latest
+      env: 'SSH_KEY'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
