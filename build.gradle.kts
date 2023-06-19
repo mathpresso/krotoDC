@@ -94,6 +94,10 @@ subprojects {
                 url = uri("artifactregistry://asia-northeast3-maven.pkg.dev/mp-artifact-registry-aa49/qanda-packages")
             }
         }
+
+        tasks.withType<Test> {
+            useJUnitPlatform()
+        }
     }
 
     configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
